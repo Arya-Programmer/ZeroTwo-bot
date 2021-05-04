@@ -64,7 +64,6 @@ class Player(wavelink.Player):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.queue = Queue()
-        self.
 
     async def connect(self, ctx, channel=None):
         if self.is_connected:
