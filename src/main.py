@@ -1,11 +1,17 @@
+import sqlite3
+
 import discord
 from discord.ext import commands
 
 from pathlib import Path
 
+from discord.ext.commands import NoEntryPointError, CommandInvokeError, ExtensionNotLoaded, ExtensionAlreadyLoaded
+
 
 class MusicBot(commands.Bot):
     def __init__(self):
+        self.conn = sqlite3.connect('info.db')
+        self.cursor = self.conn.cursor()
         self._cogs = [p.stem for p in Path("").glob("./cogs/*.py")]
         print(self._cogs)
 
@@ -15,8 +21,11 @@ class MusicBot(commands.Bot):
         print("Running Setup")
 
         for cog in self._cogs:
-            self.load_extension(f'cogs.{cog}')
-            print(f"Loaded '{cog}' cog.")
+            try:
+                self.load_extension(f'cogs.{cog}')
+                print(f"Loaded '{cog}' cog.")
+            except NoEntryPointError:
+                continue
 
         print("Setup Complete")
 
@@ -30,7 +39,38 @@ class MusicBot(commands.Bot):
         super().run(TOKEN, reconnect=True)
 
     async def on_connect(self):
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS HISTORY(
+                     guild           TEXT    NOT NULL,
+                     channel_id      INT     NOT NULL,
+                     user            TEXT    NOT NULL,
+                     command         TEXT    NOT NULL,
+                     date          timestamp NOT NULL
+                 );''')
+
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS SETTINGS(
+                     guild           TEXT    NOT NULL,
+                     channels        INT     NOT NULL,
+                     users           TEXT    NOT NULL,
+                     prefix          TEXT    NOT NULL,
+                     block_roles     TEXT    NOT NULL,
+                     djs             TEXT    NOT NULL
+                 );''')
+
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS PLAYLIST(
+                     user            TEXT    NOT NULL,
+                     guild           TEXT    NOT NULL,
+                     channel_id      INT     NOT NULL,
+                     date          timestamp NOT NULL,
+                     playlist_name   TEXT    NOT NULL,
+                     playlist_items  TEXT    NOT NULL,
+                     playlist_length TEXT    NOT NULL
+                 );''')
         print(f"Connected to Discord (latency: {self.latency * 1000}ms )")
+
+    async def shutdown(self):
+        print("Closing connection to Discord/SQL...")
+        self.cursor.close()
+        await super().close()
 
     async def on_ready(self):
         self.client_id = (await self.application_info()).id
@@ -53,14 +93,19 @@ class MusicBot(commands.Bot):
 if __name__ == '__main__':
     client = MusicBot()
 
+
     @client.command()
     async def reload(ctx):
         for cog in [p.stem for p in Path("").glob("./cogs/*.py")]:
             try:
                 client.unload_extension(f'cogs.{cog}')
                 client.load_extension(f'cogs.{cog}')
-            except Exception as e:
-                client.load_extension(f'cogs.{cog}')
+            except (ExtensionAlreadyLoaded, ExtensionNotLoaded):
+                try:
+                    client.load_extension(f'cogs.{cog}')
+                except NoEntryPointError:
+                    continue
         await ctx.send("Reloaded")
+
 
     client.run()

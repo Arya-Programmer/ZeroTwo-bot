@@ -1,4 +1,5 @@
 discord.py[voice]==1.7.2
 wavelink==0.9.9
 pip==21.1.1
-setuptools==56.0.0
+setuptools==56.1.0
+python-dateutil==2.8.1
