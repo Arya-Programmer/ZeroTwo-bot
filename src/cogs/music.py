@@ -358,22 +358,22 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         await ctx.send("`Equalizer` is now set to Metal, **Darling** Did I do a good job?")
 
     @setEqualizer.command(name='piano', aliases=['p'])
-    async def metal(self, ctx):
+    async def piano(self, ctx):
         player = self.get_player(ctx)
         await player.set_eq(Equalizer.metal())
         await ctx.send("`Equalizer` is now set to Piano, **Darling** Did I do a good job?")
 
     @setEqualizer.command(name='flat', aliases=['f'])
-    async def metal(self, ctx):
+    async def flat(self, ctx):
         player = self.get_player(ctx)
         await player.set_eq(Equalizer.metal())
         await ctx.send("`Equalizer` is now set to Flat, **Darling** Did I do a good job?")
 
-    @setEqualizer.command(name='flat', aliases=['f'])
-    async def metal(self, ctx):
+    @setEqualizer.command(name='boost', aliases=['b'])
+    async def boost(self, ctx):
         player = self.get_player(ctx)
         await player.set_eq(Equalizer.metal())
-        await ctx.send("`Equalizer` is now set to Flat, **Darling** Did I do a good job?")
+        await ctx.send("`Equalizer` is now set to **BOOST**, **Darling** Did I do a good job?")
 
     @commands.command(name='volume', aliases=['vol', 'v'])
     async def setVolume(self, ctx, amount):
