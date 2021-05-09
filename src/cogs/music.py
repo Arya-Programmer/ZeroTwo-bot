@@ -124,7 +124,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         await player.teardown()
         await ctx.send(":mailbox_with_no_mail: **Successfully disconnected**")
 
-    @commands.command(name="play", aliases=['p', 'shoot', 'fuck'])
+    @commands.command(name="stop", aliases=['s'])
     async def stop(self, ctx):
         player = self.get_player(ctx)
         if player.is_paused:
