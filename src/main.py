@@ -9,11 +9,16 @@ from pathlib import Path
 from discord.ext.commands import NoEntryPointError, CommandInvokeError, ExtensionNotLoaded, ExtensionAlreadyLoaded
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_DIR = os.path.join(BASE_DIR, "../info.db")
+COGS_PATH = os.path.join(BASE_DIR, 'cogs')
+
+
 class MusicBot(commands.Bot):
     def __init__(self):
-        self.conn = sqlite3.connect('info.db')
+        self.conn = sqlite3.connect(DB_DIR)
         self.cursor = self.conn.cursor()
-        self._cogs = [p.stem for p in Path("").glob("./cogs/*.py")]
+        self._cogs = [p.stem for p in Path("").glob(COGS_PATH+"/*.py")]
         print(self._cogs)
 
         super().__init__(command_prefix=self.prefix, case_insensitive=True, intents=discord.Intents.all())
@@ -23,6 +28,7 @@ class MusicBot(commands.Bot):
 
         for cog in self._cogs:
             try:
+                print(cog)
                 self.load_extension(f'cogs.{cog}')
                 print(f"Loaded '{cog}' cog.")
             except NoEntryPointError:
@@ -97,7 +103,10 @@ if __name__ == '__main__':
 
     @client.command()
     async def reload(ctx):
-        for cog in [p.stem for p in Path("").glob("./cogs/*.py")]:
+        for cog in [p.stem for p in Path("").glob(COGS_PATH+"/*.py")]:
+            print(cog)
+            print(COGS_PATH)
+            print(DB_DIR)
             try:
                 client.unload_extension(f'cogs.{cog}')
                 client.load_extension(f'cogs.{cog}')
