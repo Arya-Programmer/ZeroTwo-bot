@@ -50,7 +50,10 @@ class Queue:
                 self.position = 0
                 return self.firstTrack
 
-        history.append(self._queue[self.position])
+        try:
+            history.append(self._queue[self.position])
+        except TypeError:
+            return self._queue[self.position]
         return self._queue[self.position]
 
     @property

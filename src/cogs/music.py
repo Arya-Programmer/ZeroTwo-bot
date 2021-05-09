@@ -480,6 +480,13 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         player = self.get_player(ctx)
         await player.seek(position=(player.position/60) + seconds)
 
+    @commands.command(name="reconnect")
+    async def reconn(self, ctx):
+        player = self.get_player(ctx)
+        print(self.bot._connection)
+
+
+
 
 def setup(bot):
     bot.add_cog(Music(bot))
