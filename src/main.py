@@ -33,6 +33,7 @@ class MusicBot(commands.Bot):
     def run(self):
         self.setup()
 
+        print(os.environ.keys())
         TOKEN = os.environ['BOT_TOKEN']
 
         print("Running bot...")

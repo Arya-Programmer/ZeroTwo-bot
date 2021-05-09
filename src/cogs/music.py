@@ -24,9 +24,9 @@ URL_REGEX = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^
 
 NODES = {
     "MAIN": {
-        "host": "git.heroku.com/lavalink-zerotwo.git",
+        "host": "lavalink-zerotwo.herokuapp.com",
         "port": 80,
-        "rest_uri": "https://git.heroku.com/lavalink-zerotwo.git",
+        "rest_uri": "https://lavalink-zerotwo.herokuapp.com",
         "password": "youshallnotpass",
         "identifier": "MAIN",
         "region": "europe",
