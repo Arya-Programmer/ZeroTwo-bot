@@ -18,7 +18,7 @@ class MusicBot(commands.Bot):
     def __init__(self):
         self.conn = sqlite3.connect(DB_DIR)
         self.cursor = self.conn.cursor()
-        self._cogs = [p.stem for p in Path("").glob(COGS_PATH+"/*.py")]
+        self._cogs = [p.stem for p in Path("").glob("cogs/*.py")]
         print(self._cogs)
 
         super().__init__(command_prefix=self.prefix, case_insensitive=True, intents=discord.Intents.all())
@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     @client.command()
     async def reload(ctx):
-        for cog in [p.stem for p in Path("").glob(COGS_PATH+"/*.py")]:
+        for cog in [p.stem for p in Path("").glob("cogs/*.py")]:
             print(cog)
             print(COGS_PATH)
             print(DB_DIR)
