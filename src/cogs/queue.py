@@ -52,8 +52,8 @@ class Queue:
 
         try:
             history.append(self._queue[self.position])
-        except TypeError:
-            return self._queue[self.position]
+        except IndexError:
+            raise QueueIsEmpty
         return self._queue[self.position]
 
     @property

@@ -15,7 +15,7 @@ from wavelink import Equalizer
 from cogs.decorators import connectToDB
 from src.cogs.embed import getQueueEmbed, getPlaylistsEmbed, getPlaylistItemsEmbed
 from src.cogs.errors import AlreadyConnectedToChannel, NoVoiceChannel, \
-    NoQueryProvided, PlaylistNotSupported, PlayerAlreadyPaused
+    NoQueryProvided, PlaylistNotSupported, PlayerAlreadyPaused, QueueIsEmpty
 from src.cogs.player import Player
 
 URL_REGEX = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s(" \
@@ -37,7 +37,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
     def __init__(self, bot):
         self.bot = bot
         self.wavelink = wavelink.Client(bot=bot)
-        self.bot.loop.create_task(self.start_nodes())
+        self.startNodesLoop = self.bot.loop.create_task(self.start_nodes())
 
     @wavelink.WavelinkMixin.listener()
     async def on_node_ready(self, node):
@@ -184,6 +184,11 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
                 color=discord.Colour(0xFFB6C1),
             )
             await ctx.send(embed=embed)
+        if isinstance(exc, QueueIsEmpty):
+            self.startNodesLoop.close()
+            self.startNodesLoop = self.bot.loop.create_task(self.start_nodes())
+
+            print("RELOADED TASKS", locals())
 
     @commands.command(name="rythmplaylist", aliases=['rpl', 'rplaylist'])
     async def playlist(self, ctx, *, query: typing.Optional[str]):
