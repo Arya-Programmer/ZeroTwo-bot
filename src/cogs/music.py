@@ -284,7 +284,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
     @commands.command(name="saveplaylist", aliases=['savepl'])
     @connectToDB
-    async def savePlaylist(self, ctx, playlistName, cursor):
+    async def savePlaylist(self, ctx, playlistName, cursor=None):
         player = self.get_player(ctx)
         tracks = player.tracks
         tempLen = 0
@@ -320,7 +320,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
     @commands.command(name="myplaylist", aliases=['mypl'])
     @connectToDB
-    async def myPlaylist(self, ctx, cursor, name: str = None, page: int = 0, msg=None):
+    async def myPlaylist(self, ctx, cursor=None, name: str = None, page: int = 0, msg=None):
         if name:
             await self.getPlaylistByName(ctx, name, cursor)
             return
@@ -342,7 +342,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
     @commands.command(name="playplaylist", aliases=['playpl', 'ppl'])
     @connectToDB
-    async def playPlaylist(self, ctx, name, cursor):
+    async def playPlaylist(self, ctx, name, cursor=None):
         player = self.get_player(ctx)
 
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
@@ -407,7 +407,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
     @editPlaylist.command(name='replace', aliases=['rep'])
     @connectToDB
-    async def replace(self, ctx, playlist_name, index: int, *, replaceWith, cursor):
+    async def replace(self, ctx, playlist_name, index: int, *, replaceWith, cursor=None):
         if not index or not playlist_name or not replaceWith:
             return
         if not isinstance(replaceWith, wavelink.TrackPlaylist):
@@ -434,7 +434,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
     @editPlaylist.command(name='add')
     @connectToDB
-    async def add(self, ctx, playlist_name, *, addTrack, cursor):
+    async def add(self, ctx, playlist_name, *, addTrack, cursor=None):
         if not playlist_name or not addTrack:
             return
 
@@ -463,7 +463,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
     @editPlaylist.command(name='delete', aliases=['del'])
     @connectToDB
-    async def deleteItem(self, ctx, playlist_name, index, cursor):
+    async def deleteItem(self, ctx, playlist_name, index, cursor=None):
         if not playlist_name or not index:
             return
 

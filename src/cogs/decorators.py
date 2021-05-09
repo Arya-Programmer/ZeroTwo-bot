@@ -10,8 +10,9 @@ def connectToDB(func):
     cursor = db.cursor()
 
     async def wrapper(*args, **kwargs):
-        return await func(*args, cursor, **kwargs)
+        return await func(*args, cursor=cursor, **kwargs)
 
+    db.commit()
     cursor.close()
     db.close()
 
