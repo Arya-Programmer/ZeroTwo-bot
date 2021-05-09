@@ -47,7 +47,9 @@ class Player(wavelink.Player):
         # this is named teardown because disconnect is taken
         try:
             await self.destroy()
-        except KeyError:
+        except (KeyError, ConnectionResetError) as e:
+            if e == ConnectionResetError:
+                raise ConnectionResetError
             pass
 
     async def addTracks(self, ctx, tracks, ask, show_song=True):

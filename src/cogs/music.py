@@ -1,10 +1,8 @@
 import asyncio
 import datetime
 import math
-import sqlite3
 import typing
 import re
-import os.path
 from io import BytesIO
 
 import aiohttp
@@ -15,7 +13,7 @@ from wavelink import Equalizer
 
 from cogs.decorators import connectToDB
 from src.cogs.embed import getQueueEmbed, getPlaylistsEmbed, getPlaylistItemsEmbed
-from src.cogs.errors import AlreadyConnectedToChannel, NoNextPage, NoPrevPage, NoVoiceChannel, \
+from src.cogs.errors import AlreadyConnectedToChannel, NoVoiceChannel, \
     NoQueryProvided, PlaylistNotSupported, PlayerAlreadyPaused
 from src.cogs.player import Player
 
@@ -32,7 +30,6 @@ NODES = {
         "region": "europe",
     }
 }
-
 
 
 class Music(commands.Cog, wavelink.WavelinkMixin):
@@ -119,10 +116,17 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             await ctx.send("No suitable voice channel")
 
     @commands.command(name="reverseJutsu", aliases=['unsummon', 'leave', 'disconnect'])
-    async def disconnect(self, ctx, *_):
+    async def disconnect(self, ctx):
         player = self.get_player(ctx)
         await player.teardown()
         await ctx.send(":mailbox_with_no_mail: **Successfully disconnected**")
+
+    @disconnect.error
+    async def disconnect_error(self, ctx, exc):
+        if isinstance(exc, ConnectionResetError):
+            self.bot.loop.stop()
+            self.bot.loop.reconnect()
+            await ctx.send("Reconnected")
 
     @commands.command(name="stop")
     async def stop(self, ctx):
