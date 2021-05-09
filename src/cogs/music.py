@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+from datetime import timedelta
 import math
 import typing
 import re
@@ -282,7 +283,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         player = self.get_player(ctx)
         tracks = player.tracks
         tempLen = 0
-        totalLength = datetime.timedelta(milliseconds=[tempLen := tempLen + t.duration for t in tracks][-1])
+        totalLength = timedelta(milliseconds=[tempLen := tempLen + t.duration for t in tracks][-1])
 
         cursor.execute(f"INSERT INTO PLAYLIST VALUES (?,?,?,?,?,?,?)",
                        (str(ctx.author),
@@ -473,6 +474,11 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         cursor.execute(f"UPDATE PLAYLIST SET playlist_items = ? "
                        f"WHERE user = ? AND playlist_name = ?",
                        (str(playlist_items), str(ctx.author), playlist_name))
+
+    @commands.command(name="forward")
+    async def forward(self, ctx, seconds: int):
+        player = self.get_player(ctx)
+        await player.seek(position=(player.position/60) + seconds)
 
 
 def setup(bot):
