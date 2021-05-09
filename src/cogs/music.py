@@ -11,6 +11,7 @@ import aiohttp
 import discord
 import wavelink
 from discord.ext import commands
+from wavelink import Equalizer
 
 from src.cogs.embed import getQueueEmbed, getPlaylistsEmbed, getPlaylistItemsEmbed
 from src.cogs.errors import AlreadyConnectedToChannel, NoNextPage, NoPrevPage, NoVoiceChannel
@@ -328,7 +329,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         cursor = db.cursor()
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
                                 f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?", (str(ctx.author), name))
-        playlist_name, playlist_items, playlist_length, date = result.fetchall()
+        playlist_name, playlist_items, playlist_length, date = result.fetchone()
 
         for track in eval(playlist_items):
             if track := f'ytsearch:{track.strip()}':
@@ -342,15 +343,43 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         cursor.close()
         db.close()
 
-    @commands.command(name='equalizer', aliases=['eq'])
-    async def setEqualizer(self, ctx, amount):
+    @commands.group(name='equalizer', aliases=['eq'])
+    async def setEqualizer(self, ctx, band, gain, name):
+        if ctx.invoked_subcommand is None:
+            player = self.get_player(ctx)
+            await player.set_eq(Equalizer(levels=[(int(band), float(gain))]))
+            await ctx.send(f"`Equalizer: {name}` is now set to {str((int(band), float(gain)))}"
+                           f", **Darling** Did I do a good job?")
+
+    @setEqualizer.command(name='metal', aliases=['m'])
+    async def metal(self, ctx):
         player = self.get_player(ctx)
-        await player.set_equalizer(amount)
+        await player.set_eq(Equalizer.metal())
+        await ctx.send("`Equalizer` is now set to Metal, **Darling** Did I do a good job?")
+
+    @setEqualizer.command(name='piano', aliases=['p'])
+    async def metal(self, ctx):
+        player = self.get_player(ctx)
+        await player.set_eq(Equalizer.metal())
+        await ctx.send("`Equalizer` is now set to Piano, **Darling** Did I do a good job?")
+
+    @setEqualizer.command(name='flat', aliases=['f'])
+    async def metal(self, ctx):
+        player = self.get_player(ctx)
+        await player.set_eq(Equalizer.metal())
+        await ctx.send("`Equalizer` is now set to Flat, **Darling** Did I do a good job?")
+
+    @setEqualizer.command(name='flat', aliases=['f'])
+    async def metal(self, ctx):
+        player = self.get_player(ctx)
+        await player.set_eq(Equalizer.metal())
+        await ctx.send("`Equalizer` is now set to Flat, **Darling** Did I do a good job?")
 
     @commands.command(name='volume', aliases=['vol', 'v'])
     async def setVolume(self, ctx, amount):
         player = self.get_player(ctx)
-        await player.set_volume(amount)
+        await player.set_volume(int(amount))
+        await ctx.send(f"`Volume` is now set to {amount}, **Darling** Are you happy now?")
 
     @commands.group(name="editPlaylist", aliases=["editpl"])
     async def editPlaylist(self, ctx):
