@@ -1,3 +1,4 @@
+import os
 import sqlite3
 
 import discord
@@ -32,8 +33,7 @@ class MusicBot(commands.Bot):
     def run(self):
         self.setup()
 
-        with open("./token.0", "r", encoding="utf-8") as f:
-            TOKEN = f.read()
+        TOKEN = os.environ['BOT_TOKEN']
 
         print("Running bot...")
         super().run(TOKEN, reconnect=True)

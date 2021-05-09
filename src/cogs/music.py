@@ -83,7 +83,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             return "aland" in str(m.content).lower()
 
         try:
-            msg = await self.bot.wait_for("message", timeout=10, check=check)
+            await self.bot.wait_for("message", timeout=10, check=check)
         except asyncio.TimeoutError:
             await ctx.send("**Darling** do you not remember the `password`?:slight_smile:")
         else:
@@ -194,8 +194,8 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             await msg.add_reaction('⬅')
             await msg.add_reaction('➡')
             try:
-                waitfor = self.bot.wait_for("reaction_add", timeout=120, check=_check)
-                reaction, _ = await waitfor
+                wait_for = self.bot.wait_for("reaction_add", timeout=120, check=_check)
+                reaction, _ = await wait_for
             except asyncio.TimeoutError:
                 print('TIMED OUT')
                 await msg.clear_reactions()
@@ -213,7 +213,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
                             await func(currentPage, msg)
                         else:
                             raise NoPrevPage
-                    waitfor.close()
+                    wait_for.close()
                     await msg.clear_reactions()
                 except (NameError, NoNextPage, NoPrevPage):
                     "Do Nothing MF"
@@ -365,8 +365,8 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         db = sqlite3.connect(DB_DIR)
         cursor = db.cursor()
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
-                                f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?"
-                                , (str(ctx.author), playlist_name))
+                                f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?",
+                                (str(ctx.author), playlist_name))
         playlist_name, playlist_items, playlist_length, date = result.fetchone()
 
         playlist_items = eval(playlist_items)
@@ -391,8 +391,8 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         db = sqlite3.connect(DB_DIR)
         cursor = db.cursor()
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
-                                f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?"
-                                , (str(ctx.author), playlist_name))
+                                f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?",
+                                (str(ctx.author), playlist_name))
         playlist_name, playlist_items, playlist_length, date = result.fetchone()
 
         playlist_items = eval(playlist_items)
@@ -418,8 +418,8 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         db = sqlite3.connect(DB_DIR)
         cursor = db.cursor()
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
-                                f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?"
-                                , (str(ctx.author), playlist_name))
+                                f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?",
+                                (str(ctx.author), playlist_name))
         playlist_name, playlist_items, playlist_length, date = result.fetchone()
 
         playlist_items = eval(playlist_items)
