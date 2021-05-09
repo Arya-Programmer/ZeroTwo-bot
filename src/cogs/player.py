@@ -112,3 +112,6 @@ class Player(wavelink.Player):
 
         except QueueIsEmpty:
             pass
+
+    async def clear(self):
+        self.queue._queue.clear()

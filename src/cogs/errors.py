@@ -33,7 +33,7 @@ class NoQueryProvided(commands.CommandError):
     pass
 
 
-class PlayerAlreadyStopped(commands.CommandError):
+class PlayerAlreadyPaused(commands.CommandError):
     pass
 
 

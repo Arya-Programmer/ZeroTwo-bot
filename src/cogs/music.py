@@ -15,8 +15,8 @@ from wavelink import Equalizer
 
 from cogs.decorators import connectToDB
 from src.cogs.embed import getQueueEmbed, getPlaylistsEmbed, getPlaylistItemsEmbed
-from src.cogs.errors import AlreadyConnectedToChannel, NoNextPage, NoPrevPage, NoVoiceChannel, PlayerAlreadyStopped, \
-    NoQueryProvided, PlaylistNotSupported
+from src.cogs.errors import AlreadyConnectedToChannel, NoNextPage, NoPrevPage, NoVoiceChannel, \
+    NoQueryProvided, PlaylistNotSupported, PlayerAlreadyPaused
 from src.cogs.player import Player
 
 URL_REGEX = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s(" \
@@ -124,17 +124,27 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         await player.teardown()
         await ctx.send(":mailbox_with_no_mail: **Successfully disconnected**")
 
-    @commands.command(name="stop", aliases=['st'])
+    @commands.command(name="stop")
     async def stop(self, ctx):
         player = self.get_player(ctx)
-        if player.is_paused:
-            raise PlayerAlreadyStopped
-
-        await player.set_pause(True)
+        player.queue.clear()
+        await player.stop()
 
     @stop.error
     async def stop_error(self, ctx, exc):
-        if isinstance(exc, PlayerAlreadyStopped):
+        pass
+
+    @commands.command(name="pause")
+    async def pause(self, ctx):
+        player = self.get_player(ctx)
+        if player.is_paused:
+            raise PlayerAlreadyPaused
+
+        await player.set_pause(True)
+
+    @pause.error
+    async def pause_error(self, ctx, exc):
+        if isinstance(exc, PlayerAlreadyPaused):
             ctx.send("I've already paused it for you, tho")
 
     @commands.command(name="play", aliases=['p', 'shoot', 'fuck'])
