@@ -24,10 +24,10 @@ URL_REGEX = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^
 
 NODES = {
     "MAIN": {
-        "host": "192.168.1.60",
-        "port": 2334,
-        "rest_uri": "http://192.168.1.60:2334",
-        "password": "PASSPASS",
+        "host": "https://git.heroku.com/lavalink-zerotwo.git",
+        "port": 80,
+        "rest_uri": "https://git.heroku.com/lavalink-zerotwo.git",
+        "password": "youshallnotpass",
         "identifier": "MAIN",
         "region": "europe",
     }
