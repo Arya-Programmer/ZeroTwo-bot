@@ -10,7 +10,7 @@ from discord.ext.commands import NoEntryPointError, CommandInvokeError, Extensio
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_DIR = os.path.join(BASE_DIR, "../info.db")
+DB_DIR = os.path.join(BASE_DIR, "info.db")
 COGS_PATH = os.path.join(BASE_DIR, 'cogs')
 
 
@@ -18,8 +18,10 @@ class MusicBot(commands.Bot):
     def __init__(self):
         self.conn = sqlite3.connect(DB_DIR)
         self.cursor = self.conn.cursor()
-        self._cogs = [p.stem for p in Path("").glob("cogs/*.py")]
-        print(self._cogs)
+        self.IDK = [p.stem for p in Path("").glob("*/*")]
+        self.files = [p.stem for p in Path("").glob("*")]
+        self._cogs = [p.stem for p in Path(COGS_PATH).glob("*")]
+        print(self.IDK, self.files, self._cogs)
 
         super().__init__(command_prefix=self.prefix, case_insensitive=True, intents=discord.Intents.all())
 
