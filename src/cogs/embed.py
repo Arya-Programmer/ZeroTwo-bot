@@ -49,9 +49,9 @@ def getQueueEmbed(tracks, totalLength, ctx, currentPage, player):
                                                                 ),
                                                                 str(ctx.author))
                   if currentPage < 1 else '')
-    tracks = tracks[tracks.index(player.current):]
-    tracks.extend(tracks[:tracks.index(player.current)])
-    tracks = tracks[1:]
+    tracksTrue = tracks[tracks.index(player.current):]
+    tracksTrue.extend(tracks[:tracks.index(player.current)])
+    tracks = tracksTrue[1:]
     currentPageTracks = tracks[currentPage * 10:min([(currentPage + 1) * 10, len(tracks)])]
 
     embed = discord.Embed(

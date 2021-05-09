@@ -28,3 +28,14 @@ class NoTracksFound(commands.CommandError):
 class LackPermissions(commands.CommandError):
     pass
 
+
+class NoQueryProvided(commands.CommandError):
+    pass
+
+
+class PlayerAlreadyStopped(commands.CommandError):
+    pass
+
+
+class PlaylistNotSupported(commands.CommandError):
+    pass

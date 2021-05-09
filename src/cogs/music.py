@@ -13,12 +13,11 @@ import wavelink
 from discord.ext import commands
 from wavelink import Equalizer
 
+from cogs.decorators import connectToDB
 from src.cogs.embed import getQueueEmbed, getPlaylistsEmbed, getPlaylistItemsEmbed
-from src.cogs.errors import AlreadyConnectedToChannel, NoNextPage, NoPrevPage, NoVoiceChannel
+from src.cogs.errors import AlreadyConnectedToChannel, NoNextPage, NoPrevPage, NoVoiceChannel, PlayerAlreadyStopped, \
+    NoQueryProvided, PlaylistNotSupported
 from src.cogs.player import Player
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_DIR = os.path.join(BASE_DIR, "../info.db")
 
 URL_REGEX = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s(" \
             r")<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’])) "
@@ -33,6 +32,7 @@ NODES = {
         "region": "europe",
     }
 }
+
 
 
 class Music(commands.Cog, wavelink.WavelinkMixin):
@@ -125,6 +125,19 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         await ctx.send(":mailbox_with_no_mail: **Successfully disconnected**")
 
     @commands.command(name="play", aliases=['p', 'shoot', 'fuck'])
+    async def stop(self, ctx):
+        player = self.get_player(ctx)
+        if player.is_paused:
+            raise PlayerAlreadyStopped
+
+        await player.set_pause(True)
+
+    @stop.error
+    async def stop_error(self, ctx, exc):
+        if isinstance(exc, PlayerAlreadyStopped):
+            ctx.send("I've already paused it for you, tho")
+
+    @commands.command(name="play", aliases=['p', 'shoot', 'fuck'])
     async def play(self, ctx, *, query: typing.Optional[str]):
         player = self.get_player(ctx)
         orgQuery = query
@@ -134,13 +147,11 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             await ctx.send(f":thumbsup: Joined `{channel.name if channel else 'none'}` from <#{ctx.channel.id}>.")
 
         if query is None:
-            embed = discord.Embed(
-                title=":negative_squared_cross_mark: **Invalid usage**",
-                description=f"{ctx.prefix}play [Link or Query]",
-                color=discord.Colour(0xFFB6C1),
-            )
-            await ctx.send(embed=embed)
-            return
+            if player.is_paused:
+                await player.set_pause(False)
+            else:
+                raise NoQueryProvided
+
         else:
             query = query.strip("<>")
             if not re.match(URL_REGEX, query):
@@ -148,6 +159,16 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
             await ctx.send(f":youtube: **Searching** :mag_right: `{orgQuery}`")
             await player.addTracks(ctx, await self.wavelink.get_tracks(query, retry_on_failure=True), False)
+
+    @play.error
+    async def play_error(self, ctx, exc):
+        if isinstance(exc, NoQueryProvided):
+            embed = discord.Embed(
+                title=":negative_squared_cross_mark: **Invalid usage**",
+                description=f"{ctx.prefix}play [Link or Query]",
+                color=discord.Colour(0xFFB6C1),
+            )
+            await ctx.send(embed=embed)
 
     @commands.command(name="rythmplaylist", aliases=['rpl', 'rplaylist'])
     async def playlist(self, ctx, *, query: typing.Optional[str]):
@@ -201,23 +222,11 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
                 print('TIMED OUT')
                 await msg.clear_reactions()
             else:
-                try:
-                    if reaction.emoji == "➡":
-                        if currentPage + 1 < pagesCount:
-                            currentPage += 1
-                            await func(currentPage, msg)
-                        else:
-                            raise NoNextPage
-                    elif reaction.emoji == "⬅":
-                        if currentPage - 1 >= 0:
-                            currentPage -= 1
-                            await func(currentPage, msg)
-                        else:
-                            raise NoPrevPage
-                    wait_for.close()
-                    await msg.clear_reactions()
-                except (NameError, NoNextPage, NoPrevPage):
-                    "Do Nothing MF"
+                if reaction.emoji == "➡" and currentPage + 1 < pagesCount:
+                    currentPage += 1
+                elif reaction.emoji == "⬅" and currentPage - 1 >= 0:
+                    currentPage -= 1
+                await func(currentPage, msg)
 
     @commands.command(name="skip", aliases=['s', 'next', 'fs'])
     async def skip(self, ctx):
@@ -254,13 +263,13 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         await player.setLoop(False)
 
     @commands.command(name="saveplaylist", aliases=['savepl'])
-    async def savePlaylist(self, ctx, playlistName):
+    @connectToDB
+    async def savePlaylist(self, ctx, playlistName, cursor):
         player = self.get_player(ctx)
         tracks = player.tracks
         tempLen = 0
         totalLength = datetime.timedelta(milliseconds=[tempLen := tempLen + t.duration for t in tracks][-1])
-        db = sqlite3.connect(DB_DIR)
-        cursor = db.cursor()
+
         cursor.execute(f"INSERT INTO PLAYLIST VALUES (?,?,?,?,?,?,?)",
                        (str(ctx.author),
                         str(ctx.guild.name),
@@ -269,15 +278,12 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
                         str(playlistName),
                         str([t.title for t in tracks]),
                         str(totalLength)))
-        db.commit()
-        cursor.close()
-        db.close()
 
         await ctx.send(
             f":thumbsup: **Darling~** I memorized __{playlistName}__ for you"
             f":upside_down:, I will never **forget** it!:relaxed:")
 
-    async def getPlaylistByName(self, ctx, name, cursor, db, page=0, msg=None):
+    async def getPlaylistByName(self, ctx, name, cursor, page=0, msg=None):
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length"
                                 f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?", (str(ctx.author), name))
         playlist_name, playlist_items, totalLength = result.fetchone()
@@ -288,24 +294,19 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         embed = getPlaylistItemsEmbed(ctx, playlist_name, playlist_items, totalLength, currentPage)
 
         async def _callback(_page, _msg):
-            await self.getPlaylistByName(ctx, name, cursor, db, _page, _msg)
+            await self.getPlaylistByName(ctx, name, cursor, _page, _msg)
 
         await self.pageNavigation(ctx, msg, embed, pagesCount, currentPage, _callback)
 
-        cursor.close()
-        db.close()
-
     @commands.command(name="myplaylist", aliases=['mypl'])
-    async def myPlaylist(self, ctx, name: str = None, page: int = 0, msg=None):
-
-        db = sqlite3.connect(DB_DIR)
-        cursor = db.cursor()
+    @connectToDB
+    async def myPlaylist(self, ctx, cursor, name: str = None, page: int = 0, msg=None):
         if name:
-            await self.getPlaylistByName(ctx, name, cursor, db)
+            await self.getPlaylistByName(ctx, name, cursor)
             return
 
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
-                                f" FROM PLAYLIST WHERE user = ?", (str(ctx.author), ))
+                                f" FROM PLAYLIST WHERE user = ?", (str(ctx.author),))
         playlists = result.fetchall()
         currentPage = page
         pagesCount = math.ceil((len(playlists) / 10))
@@ -315,18 +316,15 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         embed = getPlaylistsEmbed(ctx, playlists, currentPage)
 
         async def _callback(_page, _msg):
-            await self.myPlaylist(ctx, name, _page, _msg)
+            await self.myPlaylist(ctx, cursor, name, _page, _msg)
 
         await self.pageNavigation(ctx, msg, embed, pagesCount, currentPage, _callback)
 
-        cursor.close()
-        db.close()
-
     @commands.command(name="playplaylist", aliases=['playpl', 'ppl'])
-    async def playPlaylist(self, ctx, name):
+    @connectToDB
+    async def playPlaylist(self, ctx, name, cursor):
         player = self.get_player(ctx)
-        db = sqlite3.connect(DB_DIR)
-        cursor = db.cursor()
+
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
                                 f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?", (str(ctx.author), name))
         playlist_name, playlist_items, playlist_length, date = result.fetchone()
@@ -340,16 +338,17 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
                     await player.addTracks(ctx, search, False, show_song=False)
 
-        cursor.close()
-        db.close()
-
     @commands.group(name='equalizer', aliases=['eq'])
-    async def setEqualizer(self, ctx, band, gain, name):
+    async def setEqualizer(self, ctx):
         if ctx.invoked_subcommand is None:
-            player = self.get_player(ctx)
-            await player.set_eq(Equalizer(levels=[(int(band), float(gain))]))
-            await ctx.send(f"`Equalizer: {name}` is now set to {str((int(band), float(gain)))}"
-                           f", **Darling** Did I do a good job?")
+            await ctx.send("You have to tell me, `what to do` **Darling**")
+
+    @setEqualizer.command(name='custom', aliases=['cus', 'c'])
+    async def custom(self, ctx, band: int, gain: int, name: str):
+        player = self.get_player(ctx)
+        await player.set_eq(Equalizer(levels=[(int(band), float(gain))]))
+        await ctx.send(f"`Equalizer: {name}` is now set to {str((int(band), float(gain)))}"
+                       f", **Darling** Did I do a good job?")
 
     @setEqualizer.command(name='metal', aliases=['m'])
     async def metal(self, ctx):
@@ -387,80 +386,79 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             await ctx.send("You should tell me what to do with the `playlist`, **Darling~**")
 
     @editPlaylist.command(name='replace', aliases=['rep'])
-    async def replace(self, ctx, playlist_name, index: int, *, replaceWith):
+    @connectToDB
+    async def replace(self, ctx, playlist_name, index: int, *, replaceWith, cursor):
         if not index or not playlist_name or not replaceWith:
             return
+        if not isinstance(replaceWith, wavelink.TrackPlaylist):
+            raise PlaylistNotSupported
 
-        db = sqlite3.connect(DB_DIR)
-        cursor = db.cursor()
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
                                 f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?",
                                 (str(ctx.author), playlist_name))
         playlist_name, playlist_items, playlist_length, date = result.fetchone()
 
         playlist_items = eval(playlist_items)
-        track = await self.wavelink.get_tracks(f'ytsearch:{replaceWith.strip()}', retry_on_failure=False)
-        if not isinstance(track, wavelink.TrackPlaylist):
-            playlist_items[index-1] = track[0].title
-            await ctx.send(f"**Hey Darling~~**. Alright I replaced {playlist_items[index-1]} with {track[0].title}")
-            cursor.execute(f"UPDATE PLAYLIST SET playlist_items = ? "
-                           f"WHERE user = ? AND playlist_name = ?",
-                           (str(playlist_items), str(ctx.author), playlist_name))
-        else:
+        track = await self.wavelink.get_tracks(replaceWith if re.match(URL_REGEX, str(replaceWith.strip("<>"))) else
+                                               f'ytsearch:{replaceWith.strip()}', retry_on_failure=False)
+        playlist_items[index - 1] = track[0].title
+        await ctx.send(f"**Hey Darling~~**. Alright I replaced {playlist_items[index - 1]} with {track[0].title}")
+        cursor.execute(f"UPDATE PLAYLIST SET playlist_items = ? "
+                       f"WHERE user = ? AND playlist_name = ?",
+                       (str(playlist_items), str(ctx.author), playlist_name))
+
+    @replace.error
+    async def replace_error(self, ctx, exc):
+        if isinstance(exc, PlaylistNotSupported):
             await ctx.send("**Darlingggg~**, you can't do that. No playlist, alright?")
 
-        cursor.close()
-        db.close()
-
     @editPlaylist.command(name='add')
-    async def add(self, ctx, playlist_name, *, addTrack):
+    @connectToDB
+    async def add(self, ctx, playlist_name, *, addTrack, cursor):
         if not playlist_name or not addTrack:
             return
 
-        db = sqlite3.connect(DB_DIR)
-        cursor = db.cursor()
+        if isinstance(addTrack, wavelink.TrackPlaylist):
+            raise PlaylistNotSupported
+
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
                                 f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?",
                                 (str(ctx.author), playlist_name))
         playlist_name, playlist_items, playlist_length, date = result.fetchone()
 
         playlist_items = eval(playlist_items)
-        track = await self.wavelink.get_tracks(f'ytsearch:{addTrack.strip()}', retry_on_failure=False)
-        if not isinstance(track, wavelink.TrackPlaylist):
-            playlist_items.append(track[0].title)
-            await ctx.send(f"**Hey Darling~~**. Alright I added {track[0].title} "
-                           f"there is {len(playlist_items)} Songs, `for you` :heart:")
-            cursor.execute(f"UPDATE PLAYLIST SET playlist_items = ? "
-                           f"WHERE user = ? AND playlist_name = ?",
-                           (str(playlist_items), str(ctx.author), playlist_name))
-        else:
+        track = await self.wavelink.get_tracks(addTrack if re.match(URL_REGEX, str(addTrack.strip("<>"))) else
+                                               f'ytsearch:{addTrack.strip()}', retry_on_failure=False)
+        playlist_items.append(track[0].title)
+        await ctx.send(f"**Hey Darling~~**. Alright I added {track[0].title} "
+                       f"there is {len(playlist_items)} Songs, `for you` :heart:")
+        cursor.execute(f"UPDATE PLAYLIST SET playlist_items = ? "
+                       f"WHERE user = ? AND playlist_name = ?",
+                       (str(playlist_items), str(ctx.author), playlist_name))
+
+    @add.error
+    async def add_error(self, ctx, exc):
+        if isinstance(exc, PlaylistNotSupported):
             await ctx.send("**Darlingggg~**, you can't do that. No playlist, `alright Darling?`")
 
-        cursor.close()
-        db.close()
-
     @editPlaylist.command(name='delete', aliases=['del'])
-    async def deleteItem(self, ctx, playlist_name, index):
+    @connectToDB
+    async def deleteItem(self, ctx, playlist_name, index, cursor):
         if not playlist_name or not index:
             return
 
-        db = sqlite3.connect(DB_DIR)
-        cursor = db.cursor()
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
                                 f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?",
                                 (str(ctx.author), playlist_name))
         playlist_name, playlist_items, playlist_length, date = result.fetchone()
 
         playlist_items = eval(playlist_items)
-        toBeDeleted = playlist_items[index-1]
+        toBeDeleted = playlist_items[index - 1]
         list(playlist_items).remove(toBeDeleted)
         await ctx.send(f"**Hey Darling~~**. Deleted {toBeDeleted} `for you` now:heart:")
         cursor.execute(f"UPDATE PLAYLIST SET playlist_items = ? "
                        f"WHERE user = ? AND playlist_name = ?",
                        (str(playlist_items), str(ctx.author), playlist_name))
-
-        cursor.close()
-        db.close()
 
 
 def setup(bot):
