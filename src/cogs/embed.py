@@ -1,9 +1,10 @@
+import math
 from datetime import timedelta, datetime
 
 import discord
 
 
-def getSongInQueueEmbed(ctx, track):
+def getSongInQueueEmbed(ctx, queue, track):
     embed = discord.Embed(
         title=f"**{track.title}**",
         url=f"{track.uri}",
@@ -15,7 +16,7 @@ def getSongInQueueEmbed(ctx, track):
                     value=str(timedelta(milliseconds=track.duration)),
                     inline=True)
     embed.add_field(name="Estimated time until playing", value="N/A Yet", inline=True)
-    embed.add_field(name="Position in queue", value=str(len(self.queue.queue) - 1), inline=True)
+    embed.add_field(name="Position in queue", value=str(len(queue.queue) - 1), inline=True)
     embed.set_thumbnail(url=track.thumb)
     embed.set_author(name='Added to queue', icon_url=ctx.author.avatar_url)
 
@@ -36,18 +37,22 @@ def getSearchOptionEmbed(ctx, tracks):
     )
     embed.set_author(name="Query Results")
     embed.set_footer(text=f"Invoked by {ctx.author.display_name}", icon_url=ctx.author.avatar_url)
+    return embed
 
 
 def getQueueEmbed(tracks, totalLength, ctx, currentPage, player):
     nowPlaying = ("__Now Playing:__\n[{}]({})"
                   " | `{}"
                   " Requested by: {}`\n\n__Up Next:__\n".format(player.current.title, player.current.uri,
-                                                                datetime.timedelta(
+                                                                timedelta(
                                                                     milliseconds=player.current.duration
                                                                 ),
                                                                 str(ctx.author))
                   if currentPage < 1 else '')
-    currentPageTracks = tracks[currentPage * 10:min([(currentPage+1)*10, len(tracks)])]
+    tracks = tracks[tracks.index(player.current):]
+    tracks.extend(tracks[:tracks.index(player.current)])
+    tracks = tracks[1:]
+    currentPageTracks = tracks[currentPage * 10:min([(currentPage + 1) * 10, len(tracks)])]
 
     embed = discord.Embed(
         title=f"**Queue for {ctx.message.guild.name}**",
@@ -55,7 +60,7 @@ def getQueueEmbed(tracks, totalLength, ctx, currentPage, player):
         description=nowPlaying +
                     "\n\n".join(
                         f"`{tracks.index(track) + 1}.` [{track.title}]({track.uri})"
-                        f" | `{datetime.timedelta(milliseconds=track.duration)}"
+                        f" | `{timedelta(milliseconds=track.duration)}"
                         f" Requested by: {str(ctx.author)}`"
                         for track in currentPageTracks
                     ) + f"\n\n**{len(tracks)} songs in queue | {totalLength} total length**",
@@ -68,5 +73,40 @@ def getQueueEmbed(tracks, totalLength, ctx, currentPage, player):
                           ' | Queue Loop: ' +
                           ("✅" if player.isQueueLooped
                            else "❎"),
+                     icon_url=ctx.author.avatar_url)
+    return embed
+
+
+def getPlaylistsEmbed(ctx, playlists, currentPage):
+    thisPagesPlaylists = playlists[currentPage * 10:min([(currentPage + 1) * 10, len(playlists)])]
+    embed = discord.Embed(
+        title=f"**Playlists for {ctx.author.name}**",
+        url=f"https://movieweb.pythonanywhere.com",
+        description=f"Playlists:"
+                    "\n\n".join(
+                        f"`{playlists.index((playlist_name, playlist_items, playlist_length, created_at)) + 1}.` "
+                        f"{playlist_name} | **{len(eval(playlist_items))} Songs {playlist_length}** "
+                        f"Created at: {str(datetime.strptime(created_at.split('.')[0], '%Y-%m-%d %H:%M:%S'))}"
+                        for playlist_name, playlist_items, playlist_length, created_at in thisPagesPlaylists
+                    ),
+        color=discord.Colour(0xFFB6C1),
+    )
+    embed.set_footer(text=f'DARLING~~ this page {currentPage + 1}/{math.ceil(len(playlists) / 10)}',
+                     icon_url=ctx.author.avatar_url)
+    return embed
+
+
+def getPlaylistItemsEmbed(ctx, playlist_name, playlist_items, totalLength, currentPage):
+    thisPagesItems = playlist_items[currentPage * 10:min([(currentPage+1)*10, len(playlist_items)])]
+    embed = discord.Embed(
+        title=f"**Playlist __{playlist_name}__ {ctx.author.display_name}**",
+        url=f"https://movieweb.pythonanywhere.com",
+        description="\n\n".join(
+            f"`{playlist_items.index(track) + 1}.` {track}"
+            for track in thisPagesItems
+        ) + f"\n\n**{len(playlist_items)} songs in __{playlist_name}__ {totalLength} **",
+        color=discord.Colour(0xFFB6C1),
+    )
+    embed.set_footer(text=f'DARLING~~ this page {currentPage + 1}/{math.ceil(len(playlist_items) / 10)}',
                      icon_url=ctx.author.avatar_url)
     return embed

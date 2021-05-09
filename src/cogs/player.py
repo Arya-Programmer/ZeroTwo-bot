@@ -50,7 +50,7 @@ class Player(wavelink.Player):
         except KeyError:
             pass
 
-    async def addTracks(self, ctx, tracks, ask):
+    async def addTracks(self, ctx, tracks, ask, show_song=True):
         if not tracks:
             raise NoTracksFound
 
@@ -61,8 +61,8 @@ class Player(wavelink.Player):
                 self.queue.add(track)
                 if len(self.queue.queue) <= 1:
                     await ctx.send(f"**Playing** :notes: `{track.title}` - Now!")
-                else:
-                    await ctx.send(embed=getSongInQueueEmbed(ctx, track))
+                elif show_song:
+                    await ctx.send(embed=getSongInQueueEmbed(ctx, self.queue, track))
 
         if not self.is_playing:
             await self.startPlayback()
