@@ -36,6 +36,7 @@ NODES = {
 class Music(commands.Cog, wavelink.WavelinkMixin):
     def __init__(self, bot):
         self.bot = bot
+        cursor = None
         self.wavelink = wavelink.Client(bot=bot)
         self.startNodesLoop = self.bot.loop.create_task(self.start_nodes())
 
@@ -320,7 +321,8 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
     @commands.command(name="myplaylist", aliases=['mypl'])
     @connectToDB
-    async def myPlaylist(self, ctx, cursor=None, name: str = None, page: int = 0, msg=None):
+    async def myPlaylist(self, ctx, name=None, page=0, msg=None, cursor=None):
+        page = int(page)
         if name:
             await self.getPlaylistByName(ctx, name, cursor)
             return
@@ -336,7 +338,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         embed = getPlaylistsEmbed(ctx, playlists, currentPage)
 
         async def _callback(_page, _msg):
-            await self.myPlaylist(ctx, cursor, name, _page, _msg)
+            await self.myPlaylist(ctx, name, _page, _msg, cursor)
 
         await self.pageNavigation(ctx, msg, embed, pagesCount, currentPage, _callback)
 
@@ -349,6 +351,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
                                 f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?", (str(ctx.author), name))
         playlist_name, playlist_items, playlist_length, date = result.fetchone()
 
+        await ctx.send("**Darling~**:zerotwo_cute: I have loaded the playlist, so please be patient.")
         for track in eval(playlist_items):
             if track := f'ytsearch:{track.strip()}':
                 search = await self.wavelink.get_tracks(track, retry_on_failure=False)
@@ -379,19 +382,19 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
     @setEqualizer.command(name='piano', aliases=['p'])
     async def piano(self, ctx):
         player = self.get_player(ctx)
-        await player.set_eq(Equalizer.metal())
+        await player.set_eq(Equalizer.piano())
         await ctx.send("`Equalizer` is now set to Piano, **Darling** Did I do a good job?")
 
     @setEqualizer.command(name='flat', aliases=['f'])
     async def flat(self, ctx):
         player = self.get_player(ctx)
-        await player.set_eq(Equalizer.metal())
+        await player.set_eq(Equalizer.flat())
         await ctx.send("`Equalizer` is now set to Flat, **Darling** Did I do a good job?")
 
     @setEqualizer.command(name='boost', aliases=['b'])
     async def boost(self, ctx):
         player = self.get_player(ctx)
-        await player.set_eq(Equalizer.metal())
+        await player.set_eq(Equalizer.boost())
         await ctx.send("`Equalizer` is now set to **BOOST**, **Darling** Did I do a good job?")
 
     @commands.command(name='volume', aliases=['vol', 'v'])
@@ -407,10 +410,11 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
     @editPlaylist.command(name='replace', aliases=['rep'])
     @connectToDB
-    async def replace(self, ctx, playlist_name, index: int, *, replaceWith, cursor=None):
+    async def replace(self, ctx, playlist_name, index, *, replaceWith, cursor=None):
+        index = int(index)
         if not index or not playlist_name or not replaceWith:
             return
-        if not isinstance(replaceWith, wavelink.TrackPlaylist):
+        if isinstance(replaceWith, wavelink.TrackPlaylist):
             raise PlaylistNotSupported
 
         result = cursor.execute(f"SELECT playlist_name, playlist_items, playlist_length, date"
@@ -483,14 +487,56 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
     @commands.command(name="forward")
     async def forward(self, ctx, seconds: int):
         player = self.get_player(ctx)
-        await player.seek(position=(player.position/60) + seconds)
+        if not player.is_playing:
+            raise PlayerAlreadyPaused
 
-    @commands.command(name="reconnect")
-    async def reconn(self, ctx):
+        await ctx.send(f"<:zerotwo_smile:841171516913614868>**Darling~~**, I have skipped :fast_forward: **{seconds}Sec**"
+                       f" from `{timedelta(milliseconds=int(player.position))}`"
+                       f" to `{timedelta(milliseconds=int(player.position + (seconds*1000)))}`")
+        await player.seek(position=player.position + (seconds*1000))
+
+    @forward.error
+    async def forward_error(self, ctx, exc):
+        if isinstance(exc, PlayerAlreadyPaused):
+            await ctx.send(f"**Darling**, you can play a song with {ctx.prefix}play <Query or Link>")
+
+    @commands.command(name="seek")
+    async def seek(self, ctx, seconds: int):
+        seconds = seconds if seconds > 0 else 0
         player = self.get_player(ctx)
-        print(self.bot._connection)
+        if not player.is_playing:
+            raise PlayerAlreadyPaused
+
+        await ctx.send(f"**Darling~~**<:zerotwo_smile:841171516913614868>, I'm now playing from"
+                       f" `{timedelta(seconds=seconds)}`")
+        await player.seek(position=seconds*1000)
+
+    @seek.error
+    async def seek_error(self, ctx, exc):
+        if isinstance(exc, PlayerAlreadyPaused):
+            await ctx.send(f"but you aren't playing any song, **Darling~~**")
+
+    @commands.command(name="rewind")
+    async def rewind(self, ctx, seconds: int):
+        player = self.get_player(ctx)
+        if not player.is_playing:
+            raise PlayerAlreadyPaused
+
+        if (rewindValue := player.position - (seconds*1000)) < player.current.duration:
+            await ctx.send(f"**Darling~~**<:zerotwo_smile:841171516913614868>, rewind by"
+                           f" `{timedelta(seconds=seconds)}`")
+        else:
+            await ctx.send(f"**Darling~~**<:zerotwo_smile:841171516913614868>, "
+                           f"you rewinded to less than zero so... aah..."
+                           f" `{timedelta(seconds=seconds)}`")
+
+        await player.seek(position=rewindValue)
 
 
+    @seek.error
+    async def seek_error(self, ctx, exc):
+        if isinstance(exc, PlayerAlreadyPaused):
+            await ctx.send(f"but you aren't playing any song, **Darling~~**")
 
 
 def setup(bot):
