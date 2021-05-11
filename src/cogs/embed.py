@@ -110,3 +110,19 @@ def getPlaylistItemsEmbed(ctx, playlist_name, playlist_items, totalLength, curre
     embed.set_footer(text=f'DARLING~~ this page {currentPage + 1}/{math.ceil(len(playlist_items) / 10)}',
                      icon_url=ctx.author.avatar_url)
     return embed
+
+
+def getHistoryEmbed(ctx, history, currentPage):
+    thisPagesItems = history[currentPage * 10:min([(currentPage+1)*10, len(history)])]
+    embed = discord.Embed(
+        title=f"**Commands run by {ctx.author.display_name} in {history[0][2]}**",
+        url=f"https://movieweb.pythonanywhere.com",
+        description="\n\n".join(
+            f"`{history.index(command) + 1}.` {command} | {date}"
+            for command, date, _ in thisPagesItems
+        ) + f"\n\n**{len(history)} commands run by {str(ctx.author)}**",
+        color=discord.Colour(0xFFB6C1),
+    )
+    embed.set_footer(text=f'DARLING~~ this page {currentPage + 1}/{math.ceil(len(playlist_items) / 10)}',
+                     icon_url=ctx.author.avatar_url)
+    return embed

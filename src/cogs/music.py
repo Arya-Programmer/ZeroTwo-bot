@@ -557,9 +557,8 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         history = result.fetchall()
         pagesCount = math.ceil((len(history) / 10))
 
-        await ctx.send(f"**Darling~** Here is your `playlist`. Told you I'll remember it, did you not **believe me**?")
-
-        embed = getPlaylistsEmbed(ctx, history, currentPage)
+        embed = getHistoryEmbed(ctx, history, currentPage)
+        await ctx.send(embed=embed)
 
         async def _callback(_page, _msg):
             await self.history(ctx, _page, _msg, cursor)
@@ -574,6 +573,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             raise NoQueryProvided
 
         else:
+            await player.stop()
             query = query.strip("<>")
             if not re.match(URL_REGEX, query):
                 query = f'ytsearch:{query}'
