@@ -19,10 +19,7 @@ class MusicBot(commands.Bot):
     def __init__(self):
         self.conn = sqlite3.connect(DB_DIR)
         self.cursor = self.conn.cursor()
-        self.IDK = [p.stem for p in Path("").glob("*/*")]
-        self.files = [p.stem for p in Path("").glob("*")]
         self._cogs = [p.stem for p in Path(COGS_PATH).glob("*")]
-        print(self.IDK, self.files, self._cogs)
 
         super().__init__(command_prefix=self.prefix, case_insensitive=True, intents=discord.Intents.all())
 
@@ -47,6 +44,16 @@ class MusicBot(commands.Bot):
 
         print("Running bot...")
         super().run(TOKEN, reconnect=True)
+
+    def add_data_if_not_exist(self, ctx):
+        text_channel_list = []
+        for channel in ctx.guilds.text_channels:
+            if channel.type == 'Text':
+                text_channel_list.append(channel)
+        settingsHasRows = len(self.cursor.execute("SELECT * FROM SETTING WHERE guild = ?", (ctx.guild.id, )).fetchall())
+        if not settingsHasRows:
+            self.cursor.execute("INSERT INTO SETTING VALUES (?,?,?,?,?,?)",
+                                (ctx.guild.id, str(ctx.guild.channels), str(ctx.author), "?", "None", "None"))
 
     async def on_connect(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS HISTORY(
@@ -88,9 +95,10 @@ class MusicBot(commands.Bot):
 
     async def prefix(self, bot, msg):
         ctx = await self.get_context(msg, cls=commands.Context)
+        self.add_data_if_not_exist(ctx)
         return commands.when_mentioned_or(
-            self.cursor.execute("SELECT prefix FROM SETTINGS WHERE guild = ?"),
-            (ctx.guild.id)
+            self.cursor.execute("SELECT prefix FROM SETTINGS WHERE guild = ?",
+            (ctx.guild.id, )).fetchone()
         )(bot, msg)
 
     async def process_commands(self, msg):
