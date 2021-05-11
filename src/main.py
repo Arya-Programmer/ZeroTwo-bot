@@ -45,14 +45,10 @@ class MusicBot(commands.Bot):
         print("Running bot...")
         super().run(TOKEN, reconnect=True)
 
-    def add_data_if_not_exist(self, ctx):
-        text_channel_list = []
-        for channel in ctx.guilds.text_channels:
-            if channel.type == 'Text':
-                text_channel_list.append(channel)
-        settingsHasRows = len(self.cursor.execute("SELECT * FROM SETTING WHERE guild = ?", (ctx.guild.id, )).fetchall())
+    async def add_data_if_not_exist(self, ctx):
+        settingsHasRows = len(self.cursor.execute("SELECT * FROM SETTINGS WHERE guild = ?", (ctx.guild.id, )).fetchall())
         if not settingsHasRows:
-            self.cursor.execute("INSERT INTO SETTING VALUES (?,?,?,?,?,?)",
+            self.cursor.execute("INSERT INTO SETTINGS VALUES (?,?,?,?,?,?)",
                                 (ctx.guild.id, str(ctx.guild.channels), str(ctx.author), "?", "None", "None"))
 
     async def on_connect(self):
@@ -95,7 +91,7 @@ class MusicBot(commands.Bot):
 
     async def prefix(self, bot, msg):
         ctx = await self.get_context(msg, cls=commands.Context)
-        self.add_data_if_not_exist(ctx)
+        await self.add_data_if_not_exist(ctx)
         return commands.when_mentioned_or(
             self.cursor.execute("SELECT prefix FROM SETTINGS WHERE guild = ?",
             (ctx.guild.id, )).fetchone()
