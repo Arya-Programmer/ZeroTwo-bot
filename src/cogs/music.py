@@ -553,7 +553,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
     async def history(self, ctx, currentPage=0, msg=None, cursor=None):
         result = cursor.execute(f"SELECT user, command, date"
                                 f" FROM HISTORY WHERE user = ? AND guild = ?",
-                                (str(ctx.author), ctx.author.guild.id))
+                                (str(ctx.author), ctx.guild.id))
         history = result.fetchall()
         pagesCount = math.ceil((len(history) / 10))
 
@@ -573,31 +573,31 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             raise NoQueryProvided
 
         else:
-            await player.stop()
             query = query.strip("<>")
             if not re.match(URL_REGEX, query):
                 query = f'ytsearch:{query}'
 
             await ctx.send(f":youtube: **Searching** :mag_right: `{orgQuery}`")
             await player.playTrackNow(ctx, await self.wavelink.get_tracks(query, retry_on_failure=True))
+            await player.stop()
 
     @commands.command(name="remove", alises=['r'])
     async def remove(self, ctx, *, query):
         player = self.get_player(ctx)
         tracks = player.tracks
         toRemove = None
-        if query is str:
+        if not query.isnumeric():
             for track in tracks:
-                if query in track.title:
+                if query.lower() in track.title.lower():
                     toRemove = tracks.index(track)
-                    await ctx.send(f"Deleted {track.title} as you wanted, **Darling**")
                     break
             if not toRemove:
                 raise NoQueryProvided
         else:
-            toRemove = tracks[query+1]
+            toRemove = int(query)
 
-        player.remove(toRemove)
+        await ctx.send(f"Deleted {tracks[toRemove]} as you wanted, **Darling**")
+        await player.removeIndex(toRemove)
 
 
 def setup(bot):

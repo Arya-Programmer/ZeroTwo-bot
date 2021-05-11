@@ -123,6 +123,6 @@ def getHistoryEmbed(ctx, history, currentPage):
         ) + f"\n\n**{len(history)} commands run by {str(ctx.author)}**",
         color=discord.Colour(0xFFB6C1),
     )
-    embed.set_footer(text=f'DARLING~~ this page {currentPage + 1}/{math.ceil(len(playlist_items) / 10)}',
+    embed.set_footer(text=f'DARLING~~ this page {currentPage + 1}/{math.ceil(len(history) / 10)}',
                      icon_url=ctx.author.avatar_url)
     return embed

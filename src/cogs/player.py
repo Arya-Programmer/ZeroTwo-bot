@@ -129,8 +129,8 @@ class Player(wavelink.Player):
                 self.queue.addToFirst(track)
                 await ctx.send(f"**Playing** :notes: `{track.title}` - Now!")
 
-        if not self.is_playing:
-            await self.startPlayback()
+        # if not self.is_playing:
+        #     await self.startPlayback()
 
     async def removeIndex(self, index):
         self.queue.removeIndex(index)

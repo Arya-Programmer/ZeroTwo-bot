@@ -101,6 +101,7 @@ class MusicBot(commands.Bot):
         if ctx.command is not None:
             self.cursor.execute("INSERT INTO HISTORY VALUES (?, ?, ?, ?, ?)",
                                 (ctx.guild.id, ctx.channel.id, str(ctx.author), msg.content, str(datetime.now())))
+            self.conn.commit()
             await self.invoke(ctx)
 
     async def on_message(self, msg):

@@ -14,10 +14,10 @@ class Queue:
         self._queue.extend(args)
 
     def addToFirst(self, *args):
-        self._queue.insert(0, args)
+        self._queue.insert(self.position+1, args[0])
 
-    def removeIndex(self, *args):
-        self._queue.insert(0, args)
+    def removeIndex(self, index):
+        self._queue.remove(self._queue[index])
 
     @property
     def firstTrack(self):
