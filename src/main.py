@@ -1,12 +1,13 @@
 import os
 import sqlite3
+from datetime import datetime
 
 import discord
 from discord.ext import commands
 
 from pathlib import Path
 
-from discord.ext.commands import NoEntryPointError, CommandInvokeError, ExtensionNotLoaded, ExtensionAlreadyLoaded
+from discord.ext.commands import NoEntryPointError, ExtensionNotLoaded, ExtensionAlreadyLoaded
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -86,12 +87,18 @@ class MusicBot(commands.Bot):
         print(self.client_id)
 
     async def prefix(self, bot, msg):
-        return commands.when_mentioned_or("?")(bot, msg)
+        ctx = await self.get_context(msg, cls=commands.Context)
+        return commands.when_mentioned_or(
+            self.cursor.execute("SELECT prefix FROM SETTINGS WHERE guild = ?"),
+            (ctx.guild.id)
+        )(bot, msg)
 
     async def process_commands(self, msg):
         ctx = await self.get_context(msg, cls=commands.Context)
 
         if ctx.command is not None:
+            self.cursor.execute("INSERT INTO HISTORY VALUES (?, ?, ?, ?, ?)",
+                                (ctx.guild.id, ctx.author.channel.id, str(ctx.author), msg, datetime.now()))
             await self.invoke(ctx)
 
     async def on_message(self, msg):

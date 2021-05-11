@@ -11,6 +11,7 @@ import discord
 import wavelink
 from discord.ext import commands
 from wavelink import Equalizer
+import requests
 
 from cogs.decorators import connectToDB
 from src.cogs.embed import getQueueEmbed, getPlaylistsEmbed, getPlaylistItemsEmbed
@@ -36,7 +37,6 @@ NODES = {
 class Music(commands.Cog, wavelink.WavelinkMixin):
     def __init__(self, bot):
         self.bot = bot
-        cursor = None
         self.wavelink = wavelink.Client(bot=bot)
         self.startNodesLoop = self.bot.loop.create_task(self.start_nodes())
 
@@ -351,7 +351,8 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
                                 f" FROM PLAYLIST WHERE user = ? AND playlist_name = ?", (str(ctx.author), name))
         playlist_name, playlist_items, playlist_length, date = result.fetchone()
 
-        await ctx.send("**Darling~**:zerotwo_cute: I have loaded the playlist, so please be patient.")
+        await ctx.send("**Darling~**<:zerotwo_smile:841171516913614868> "
+                       "I have loaded the playlist, so please be patient.")
         for track in eval(playlist_items):
             if track := f'ytsearch:{track.strip()}':
                 search = await self.wavelink.get_tracks(track, retry_on_failure=False)
@@ -490,7 +491,8 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         if not player.is_playing:
             raise PlayerAlreadyPaused
 
-        await ctx.send(f"<:zerotwo_smile:841171516913614868>**Darling~~**, I have skipped :fast_forward: **{seconds}Sec**"
+        await ctx.send(f"<:zerotwo_smile:841171516913614868>**Darling~~**, "
+                       f"I have skipped :fast_forward: **{seconds}Sec**"
                        f" from `{timedelta(milliseconds=int(player.position))}`"
                        f" to `{timedelta(milliseconds=int(player.position + (seconds*1000)))}`")
         await player.seek(position=player.position + (seconds*1000))
@@ -532,11 +534,70 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
         await player.seek(position=rewindValue)
 
-
     @seek.error
     async def seek_error(self, ctx, exc):
         if isinstance(exc, PlayerAlreadyPaused):
             await ctx.send(f"but you aren't playing any song, **Darling~~**")
+
+    @commands.command(name="lyric", aliases=['ly'])
+    async def getLyric(self, ctx, song_author, *, song_title):
+
+        url = "https://api.lyrics.ovh/v1/{}/{}"
+        response = requests.request("GET", url.format(song_author, song_title))
+
+        embed = discord.Embed(title=f"Lyrics for {song_title} by {song_author}", description=response.text)
+        await ctx.send(embed=embed)
+
+    @commands.command(name="history", aliases=['hist'])
+    @connectToDB
+    async def history(self, ctx, currentPage=0, msg=None, cursor=None):
+        result = cursor.execute(f"SELECT user, command, date"
+                                f" FROM HISTORY WHERE user = ? AND guild = ?",
+                                (str(ctx.author), ctx.author.guild.id))
+        history = result.fetchall()
+        pagesCount = math.ceil((len(history) / 10))
+
+        await ctx.send(f"**Darling~** Here is your `playlist`. Told you I'll remember it, did you not **believe me**?")
+
+        embed = getPlaylistsEmbed(ctx, history, currentPage)
+
+        async def _callback(_page, _msg):
+            await self.history(ctx, _page, _msg, cursor)
+
+        await self.pageNavigation(ctx, msg, embed, pagesCount, currentPage, _callback)
+
+    @commands.command(name="playNow", alises=['pn'])
+    async def playNow(self, ctx, *, query):
+        player = self.get_player(ctx)
+        orgQuery = query
+        if query is None:
+            raise NoQueryProvided
+
+        else:
+            query = query.strip("<>")
+            if not re.match(URL_REGEX, query):
+                query = f'ytsearch:{query}'
+
+            await ctx.send(f":youtube: **Searching** :mag_right: `{orgQuery}`")
+            await player.playTrackNow(ctx, await self.wavelink.get_tracks(query, retry_on_failure=True))
+
+    @commands.command(name="remove", alises=['r'])
+    async def remove(self, ctx, *, query):
+        player = self.get_player(ctx)
+        tracks = player.tracks
+        toRemove = None
+        if query is str:
+            for track in tracks:
+                if query in track.title:
+                    toRemove = tracks.index(track)
+                    await ctx.send(f"Deleted {track.title} as you wanted, **Darling**")
+                    break
+            if not toRemove:
+                raise NoQueryProvided
+        else:
+            toRemove = tracks[query+1]
+
+        player.remove(toRemove)
 
 
 def setup(bot):

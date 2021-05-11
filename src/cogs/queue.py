@@ -13,6 +13,12 @@ class Queue:
     def add(self, *args):
         self._queue.extend(args)
 
+    def addToFirst(self, *args):
+        self._queue.insert(0, args)
+
+    def removeIndex(self, *args):
+        self._queue.insert(0, args)
+
     @property
     def firstTrack(self):
         if not self._queue:
