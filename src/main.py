@@ -90,19 +90,17 @@ class MusicBot(commands.Bot):
         print(self.client_id)
 
     async def prefix(self, bot, msg):
-        ctx = await self.get_context(msg, cls=commands.Context)
-        await self.add_data_if_not_exist(ctx)
-        return commands.when_mentioned_or(
-            self.cursor.execute("SELECT prefix FROM SETTINGS WHERE guild = ?",
-            (ctx.guild.id, )).fetchone()
-        )(bot, msg)
+        await self.add_data_if_not_exist(msg)
+        prefix = self.cursor.execute("SELECT prefix FROM SETTINGS WHERE guild = ?",
+            (msg.guild.id, )).fetchone()[0]
+        return commands.when_mentioned_or(prefix)(bot, msg)
 
     async def process_commands(self, msg):
         ctx = await self.get_context(msg, cls=commands.Context)
 
         if ctx.command is not None:
             self.cursor.execute("INSERT INTO HISTORY VALUES (?, ?, ?, ?, ?)",
-                                (ctx.guild.id, ctx.author.channel.id, str(ctx.author), msg, datetime.now()))
+                                (ctx.guild.id, ctx.channel.id, str(ctx.author), msg.content, str(datetime.now())))
             await self.invoke(ctx)
 
     async def on_message(self, msg):
