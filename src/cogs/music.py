@@ -14,7 +14,7 @@ from wavelink import Equalizer
 import requests
 
 from cogs.decorators import connectToDB
-from src.cogs.embed import getQueueEmbed, getPlaylistsEmbed, getPlaylistItemsEmbed
+from src.cogs.embed import getQueueEmbed, getPlaylistsEmbed, getPlaylistItemsEmbed, getHistoryEmbed
 from src.cogs.errors import AlreadyConnectedToChannel, NoVoiceChannel, \
     NoQueryProvided, PlaylistNotSupported, PlayerAlreadyPaused, QueueIsEmpty
 from src.cogs.player import Player
